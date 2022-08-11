@@ -1,80 +1,60 @@
 from tkinter import *
-import time
+import feedparser  # Parse RSS feed
 import sys
-import feedparser
+from qbittorrent import Client  # Qbittorrent Client
+import re  # Regular Expressions
+import inquirer  # Question Choice Library
 
 
-root = Tk()
-root.geometry("600x500")
-root.title("My Anime App")
-myContainer = Frame(root)
-myContainer.pack(side=TOP, expand=YES, fill=BOTH)
-feeds = []
-fullFeeds = []
-Title = []
-Time = []
-Link = []
-TimeStamp = []
+# https://www.thepythoncode.com/article/download-torrent-files-in-python
+# 'title', 'title_detail', 'links', 'link', 'id', 'guidislink', 'published', 'published_parsed', 'tags', 'subsplease_size'
+qb = Client("http://127.0.0.1:8080/")
+qb.login('nafislord', 'animedownload')
 
-HLabel1 = Label(myContainer, text="Title", fg="blue").grid(row=0, column=0)
-HLabel2 = Label(myContainer, text="Time", fg="blue").grid(row=0, column=1)
-HLabel3 = Label(myContainer, text="Link", fg="blue").grid(row=0, column=2)
-HLabel4 = Label(myContainer, text="TimeStamp", fg="blue").grid(row=0, column=3)
-QuitButton = Button(myContainer, text="Quit",
-                    command=root.destroy)
+NewsFeed = feedparser.parse(
+    "https://subsplease.org/rss/?r=1080")
+
+animeList = []
+
+for i in range(0, len(NewsFeed.entries)):
+    animeList.append(NewsFeed.entries[i].title)
+    # print(NewsFeed.entries[i].title)
+    # print(NewsFeed.entries[i].published)
+
+
+def listAnime(title):
+    r = re.compile(".*"+title, re.IGNORECASE)
+    foundItems = list(filter(r.match, animeList))
+    print(foundItems)
+    # for i in range(0, len(animeList)):
+    #     x =
+
+    #     if title ==:
+    #         print(NewsFeed.entries[i].link)
+    #         qb.download_from_link(NewsFeed.entries[i].link)
+    #         break
+    #     else:
+    #         print("Anime not found")
+    #         main()
+
+
+# magnet_link = NewsFeed.entries[0].link
+# qb.download_from_link(magnet_link)
+
+torrents = qb.torrents()
+
+for torrent in torrents:
+    print(torrent['name'])
 
 
 def main():
     choice = input(
-        "Press 1 to refresh RSS feed, 2 to add a new feed or 3 to quit: ")
-    if choice == "1":
-        showFeed()
-        main()
-    if choice == "2":
-        addNewFeed()
-        main()
-    if choice == "3":
+        "Type Anime Name to Download or type Quit! to exit: ")
+    if choice == "Quit!":
         sys.exit()
     else:
-        "Please enter a valid number."
-
-
-def addNewFeed():
-    newFeed = input("Please enter an RSS feed you'd like added: ")
-    feeds.append(newFeed)
-    for i in feeds:
-        d = feedparser.parse(i)
-        for j in range(0, len(d)):
-            parsedTime = time.mktime(d.entries[j].published_parsed)
-            displayTime = time.strftime(
-                "%Y-%m-%d %H:%M:%S", d.entries[j].published_parsed)
-            theTuple = (
-                parsedTime, d.entries[j].title, displayTime, d.entries[j].link)
-            fullFeeds.append(theTuple)
-    sortList()
-    showFeed()
-
-
-def sortList():
-    fullFeeds.sort()
-
-
-def showFeed():
-    for i in range(0, len(fullFeeds)):
-        myLabel1 = Label(myContainer, text=fullFeeds[i][1])
-        Title.append(myLabel1)
-        myLabel2 = Label(myContainer, text=fullFeeds[i][2])
-        Time.append(myLabel2)
-        myLabel3 = Label(myContainer, text=fullFeeds[i][3])
-        Link.append(myLabel3)
-        myLabel4 = Label(myContainer, text=fullFeeds[i][0])
-        TimeStamp.append(myLabel4)
-    for i in range(0, len(fullFeeds)):
-        Title[i].grid(row=i+1, column=0, sticky=W)
-        Time[i].grid(row=i+1, column=1, sticky=W)
-        Link[i].grid(row=i+1, column=2, sticky=W)
-        TimeStamp[i].grid(row=i+1, column=3, sticky=W)
+        listAnime(choice)
+        main()
 
 
 main()
-root.mainloop()
