@@ -1,50 +1,39 @@
+import sys
 from tkinter import *
 import feedparser  # Parse RSS feed
-import sys
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 import inquirer  # Question Choice Library
 
+animeList = []
 
-# https://www.thepythoncode.com/article/download-torrent-files-in-python
-# 'title', 'title_detail', 'links', 'link', 'id', 'guidislink', 'published', 'published_parsed', 'tags', 'subsplease_size'
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
 
-NewsFeed = feedparser.parse(
+animeFeed = feedparser.parse(
     "https://subsplease.org/rss/?r=1080")
 
-animeList = []
-
-for i in range(0, len(NewsFeed.entries)):
-    animeList.append(NewsFeed.entries[i].title)
-    # print(NewsFeed.entries[i].title)
-    # print(NewsFeed.entries[i].published)
+for i in range(0, len(animeFeed.entries)):
+    animeList.append(animeFeed.entries[i].title)
 
 
 def listAnime(title):
     r = re.compile(".*"+title, re.IGNORECASE)
     foundItems = list(filter(r.match, animeList))
-    print(foundItems)
-    # for i in range(0, len(animeList)):
-    #     x =
-
-    #     if title ==:
-    #         print(NewsFeed.entries[i].link)
-    #         qb.download_from_link(NewsFeed.entries[i].link)
-    #         break
-    #     else:
-    #         print("Anime not found")
-    #         main()
+    if (foundItems == []):
+        print("No Anime Found")
+        main()
+    answer = inquirer.prompt(
+        [inquirer.List('anime', message="Which Anime do you wanna download?", choices=foundItems)])
+    downloadAnime(answer["anime"])
 
 
-# magnet_link = NewsFeed.entries[0].link
-# qb.download_from_link(magnet_link)
-
-torrents = qb.torrents()
-
-for torrent in torrents:
-    print(torrent['name'])
+def downloadAnime(title):
+    for i in range(0, len(animeList)):
+        if title == animeList[i]:
+            qb.download_from_link(animeFeed.entries[i].link)
+            print("Downloading " + title)
+            break
 
 
 def main():

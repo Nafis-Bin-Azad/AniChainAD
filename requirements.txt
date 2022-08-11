@@ -1,6 +1,7 @@
 feedparser==6.0.10
 tk-tools==0.16.0
 python-qbittorrent==0.4.2
+inquirer==2.10.0
 attr==0.3.2
 brotli==1.0.9
 brotlicffi==1.0.9.2
