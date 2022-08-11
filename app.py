@@ -39,10 +39,10 @@ def listAnime(title):
 
 
 def downloadAnime(title):
-    for i in range(0, len(animeList)):
-        if title == animeList[i]:
-            qb.download_from_link(animeFeed.entries[i].link)
+    for i in range(0, len(animeFeed.entries)):
+        if title == animeFeed.entries[i].title:
             print("Downloading " + title)
+            qb.download_from_link(animeFeed.entries[i].link)
             break
 
 

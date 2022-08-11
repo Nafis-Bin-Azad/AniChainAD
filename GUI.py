@@ -2,12 +2,12 @@ try:
     import Tkinter as tk
     import tkFont
     import ttk
-    from app import *
+    import app as appData
 except ImportError:  # Python 3
     import tkinter as tk
     import tkinter.font as tkFont
     import tkinter.ttk as ttk
-    from app import *
+    import app as appData
 
 
 class MultiColumnListbox(object):
@@ -33,6 +33,7 @@ class MultiColumnListbox(object):
         self.tree.configure(yscrollcommand=vsb.set,
                             xscrollcommand=hsb.set)
         self.tree.grid(column=0, row=0, sticky='nsew', in_=container)
+        self.tree.bind("<<TreeviewSelect>>", self.OnSelect)
         vsb.grid(column=1, row=0, sticky='ns', in_=container)
         hsb.grid(column=0, row=1, sticky='ew', in_=container)
         container.grid_columnconfigure(0, weight=1)
@@ -54,6 +55,12 @@ class MultiColumnListbox(object):
                 if self.tree.column(title_header[ix], width=None) < col_w:
                     self.tree.column(title_header[ix], width=col_w)
 
+    def OnSelect(self, event):
+        item = self.tree.selection()[0]
+        animeTitle = self.tree.item(item, "values")[1]
+        print(animeTitle)
+        appData.downloadAnime(animeTitle)
+
 
 def sortby(tree, col, descending):
     # Sort tree contents when a column header is clicked on
@@ -73,11 +80,12 @@ def sortby(tree, col, descending):
 
 # Data to be displayed in the listbox
 title_header = ['Date', 'Title']
-data_list = animeList
+data_list = appData.animeList
 
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.title("AniChainAD")
+    root.attributes("-fullscreen", True)
     listbox = MultiColumnListbox()
     root.mainloop()
