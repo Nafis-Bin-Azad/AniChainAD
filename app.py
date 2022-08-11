@@ -1,20 +1,30 @@
 import sys
-from tkinter import *
+import time
 import feedparser  # Parse RSS feed
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 import inquirer  # Question Choice Library
 
 animeList = []
+animeFeed = feedparser.parse(
+    "https://subsplease.org/rss/?r=1080")
 
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
 
-animeFeed = feedparser.parse(
-    "https://subsplease.org/rss/?r=1080")
 
-for i in range(0, len(animeFeed.entries)):
-    animeList.append(animeFeed.entries[i].title)
+def addFeedData():
+    for i in range(0, len(animeFeed.entries)):
+        parsedTime = time.strftime(
+            "%Y-%m-%d %H:%M:%S", animeFeed.entries[i].published_parsed)
+        parseTitle = animeFeed.entries[i].title
+        animeList.append((parsedTime, parseTitle))
+
+    sortList()
+
+
+def sortList():
+    animeList.sort()
 
 
 def listAnime(title):
@@ -46,4 +56,5 @@ def main():
         main()
 
 
-main()
+addFeedData()
+# main()
