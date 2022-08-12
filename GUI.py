@@ -20,7 +20,6 @@ class MultiColumnListbox(object):
         self._build_tree()
 
     def _setup_widgets(self):
-
         container = ttk.Frame()
         container.pack(fill='both', expand=True)
 
@@ -29,6 +28,7 @@ class MultiColumnListbox(object):
 
         self.input = ttk.Entry()
         self.input.grid(row=0, column=1, in_=container)
+        self.input.bind("<KeyRelease>", self.EntrySearch)
 
         # create a treeview with dual scrollbars
         self.tree = ttk.Treeview(columns=title_header, show="headings")
@@ -54,18 +54,25 @@ class MultiColumnListbox(object):
             self.tree.column(col,
                              width=tkFont.Font().measure(col.title()))
 
-        for item in data_list:
-            self.tree.insert('', 'end', values=item)
-            # adjust column's width if necessary to fit each value
-            for ix, val in enumerate(item):
-                col_w = tkFont.Font().measure(val)
-                if self.tree.column(title_header[ix], width=None) < col_w:
-                    self.tree.column(title_header[ix], width=col_w)
+        insertDataToTree(self, data_list)
 
     def OnSelect(self, event):
-        item = self.tree.selection()[0]
-        animeTitle = self.tree.item(item, "values")[1]
-        # appData.downloadAnime(animeTitle)
+        selectedItems = self.tree.selection()
+        downloadTitles = []
+        for item in selectedItems:
+            downloadTitles.append(self.tree.item(item, "values")[1])
+        # download selected items can be looped through if multiple items are selected
+        animeTitle = None if len(downloadTitles) == 0 else downloadTitles[0]
+        appData.downloadAnime(animeTitle)
+
+    def EntrySearch(self, event):
+        searchInputText = self.input.get()
+        if (searchInputText == ""):
+            resetData(self)
+        animeFound = appData.searchAnime(str(searchInputText))
+        self.tree.delete(*self.tree.get_children())
+        # update data in tree with selected items
+        insertDataToTree(self, animeFound)
 
 
 def sortby(tree, col, descending):
@@ -82,6 +89,20 @@ def sortby(tree, col, descending):
     # switch the heading so it will sort in the opposite direction
     tree.heading(col, command=lambda col=col: sortby(tree, col,
                                                      int(not descending)))
+
+
+def insertDataToTree(self, data):
+    for item in data:
+        self.tree.insert('', 'end', values=item)
+        # adjust column's width if necessary to fit each value
+        for ix, val in enumerate(item):
+            col_w = tkFont.Font().measure(val)
+            if self.tree.column(title_header[ix], width=None) < col_w:
+                self.tree.column(title_header[ix], width=col_w)
+
+
+def resetData(self):
+    insertDataToTree(self, data_list)
 
 
 # Data to be displayed in the listbox

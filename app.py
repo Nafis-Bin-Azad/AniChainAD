@@ -3,7 +3,6 @@ import time
 import feedparser  # Parse RSS feed
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
-import inquirer  # Question Choice Library
 
 animeList = []
 animeFeed = feedparser.parse(
@@ -27,15 +26,10 @@ def sortList():
     animeList.sort()
 
 
-def listAnime(title):
+def searchAnime(title):
     r = re.compile(".*"+title, re.IGNORECASE)
-    foundItems = list(filter(r.match, animeList))
-    if (foundItems == []):
-        print("No Anime Found")
-        main()
-    answer = inquirer.prompt(
-        [inquirer.List('anime', message="Which Anime do you wanna download?", choices=foundItems)])
-    downloadAnime(answer["anime"])
+    result_list = filter(lambda tup: any(map(r.match, tup)), animeList)
+    return result_list
 
 
 def downloadAnime(title):
@@ -46,15 +40,4 @@ def downloadAnime(title):
             break
 
 
-def main():
-    choice = input(
-        "Type Anime Name to Download or type Quit! to exit: ")
-    if choice == "Quit!":
-        sys.exit()
-    else:
-        listAnime(choice)
-        main()
-
-
 addFeedData()
-# main()
