@@ -10,16 +10,9 @@ import hashlib
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 
-animeFeedData = None
-data = [{
-    'title': 'One Piece',
-    'lastHash': 'None',
-    'animeGroup': 'subsplease',
-    'resolution': '1080p',
-}]
-
-# animeGroups = ["subsplease", "yameii"]
-# defaultDownloadResolution = "1080p"
+periodToCheckForNewEpisodes = 3600  # in seconds
+defaultAnimeSearchGroup = 'subsplease'
+defaultDownloadResolution = '1080p'
 
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
@@ -119,31 +112,23 @@ def checkForNewEpisode(oldItem, newItem):
     newHash = generateAnimeHash(
         newItem.link, newItem.title)
     if newHash == oldItem['lastHash']:
-        print("No new episode found")
+        print("No new episode found for " + oldItem['title'])
         return False
     else:
         print("New episode found")
         return True
 
 
-def checkIfListExists():
-    if os.path.exists('animeList.json'):
+def doesPrevListDataExist():
+    if os.path.exists('animeList.json') and os.path.getsize('animeList.json') > 0:
         print("Anime List Data exists and is readable")
-
+        return True
     else:
-        print("Anime List Data file is missing or is not readable, creating file...")
-        print("Please input anime to track")
-        data = [{
-            'title': input('Anime Name: '),
-            'lastHash': 'None',
-            'animeGroup': 'subsplease',
-            'resolution': '1080p',
-        }]
-        writeDataToJSON(data)
+        print("Anime List Data file is missing or is not readable")
+        return False
 
 
 def loadData():
-    checkIfListExists()
     with open('animeList.json', 'r') as f:
         data = json.load(f)
         return data
@@ -154,9 +139,7 @@ def writeDataToJSON(data):
         json.dump(data, f)
 
 
-def main():
-    loadData()
-    # Check for new episodes for each anime in the list
+def searchForNewEpisodes(data):
     for index, item in enumerate(data):
         rssLink = generateRSSFeedString(
             item['animeGroup'], item['resolution'], item['title'])
@@ -165,13 +148,30 @@ def main():
         newItem = animeFeedData.entries[0]
 
         if checkForNewEpisode(oldItem=item, newItem=newItem):
-            print("Downloading " + item['title'])
-            # downloadAnime(newItem.link)
-            print('Before', data)
+            print("Downloading " + newItem.title)
+            downloadAnime(newItem.link)
             newHash = generateAnimeHash(newItem.link, newItem.title)
             data[index].update({'lastHash': newHash})
-            print("After Update", data)
-    writeDataToJSON(data)
+
+
+def main():
+    if doesPrevListDataExist():
+        while (True):
+            data = loadData()
+            # Check for new episodes for each anime in the list
+            searchForNewEpisodes(data)
+            writeDataToJSON(data)
+            time.sleep(periodToCheckForNewEpisodes)
+    else:
+        print("Creating new anime list data")
+        print("Please input anime to track")
+        data = [{
+            'title': input('Anime Name: '),
+            'lastHash': 'None',
+            'animeGroup': defaultAnimeSearchGroup,
+            'resolution': defaultDownloadResolution,
+        }]
+        writeDataToJSON(data)
 
 
 main()
