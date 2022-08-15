@@ -1,15 +1,18 @@
 import time
 import json
+import sys
 import os
 import feedparser  # Parse RSS feed
 import urllib.parse
 import hashlib
+import libtorrent as lt
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 
 periodToCheckForNewEpisodes = 3600  # in seconds
 defaultAnimeSearchGroup = 'subsplease'
 defaultDownloadResolution = '1080p'
+defaultDownloadDirectory = './downloads'
 
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
@@ -51,31 +54,37 @@ def generateAnimeHash(link, title):
     return hashlib.md5(textToEncode.encode('utf-8')).hexdigest()
 
 
-def downloadAnime(link):
-    qb.download_from_link(link)
-    # try:
-    #     # params = {
-    #     #     'save_path': savePath,
-    #     #     'storage_mode': lt.storage_mode_t(2),
-    #     #     'paused': False,
-    #     #     'auto_managed': True,
-    #     #     'duplicate_is_error': True
-    #     # }
-    #     # ses = lt.session()
-    #     # ses.listen_on(6881, 6891)
-    #     # handle = lt.add_magnet_uri(ses, link, params)
-    #     # ses.start_dht()
+def downloadAnime(link, savePath):
+    try:
+        ses = lt.session({'listen_interfaces': '0.0.0.0:6881'})
+        name = link.upper()
+        url = 'magnet:?xt=urn:btih:%s' % (name,)
+        torrent = lt.parse_magnet_uri(url)
+        torrent.save_path = savePath
+        h = ses.add_torrent(torrent)
+        s = h.status()
+        print('starting', s.name)
 
-    #     # while (not handle.has_metadata()):
-    #     #     time.sleep(1)
+        while (not s.is_seeding):
+            s = h.status()
 
-    #     # while (handle.status().state != lt.torrent_status.seeding):
-    #     #     s = handle.status()
+            print('\r%.2f%% complete (down: %.1f kB/s up: %.1f kB/s peers: %d) %s' % (
+                s.progress * 100, s.download_rate / 1000, s.upload_rate / 1000,
+                s.num_peers, s.state), end=' ')
 
-    #     #     time.sleep(5)
-    #     qb.download_from_link(link)
-    # except:
-    #     pass
+            # alerts = ses.pop_alerts()
+            # for a in alerts:
+            #     if a.category() & lt.alert.category_t.error_notification:
+            #         print(a)
+            sys.stdout.flush()
+
+            time.sleep(1)
+
+        print(h.status().name, 'complete')
+    except Exception as e:
+        print(e)
+        print("Error downloading anime")
+        return False
 
 
 def generateRSSFeedString(animeGroup, resolution, searchTerm):
@@ -86,32 +95,28 @@ def generateRSSFeedString(animeGroup, resolution, searchTerm):
 
 def downloadAllEpisodesOfAnime():
     toDownload = generateRSSFeedString(defaultAnimeSearchGroup,
-                                       defaultDownloadResolution, 'Kinsou no Vermeil')
+                                       defaultDownloadResolution, 'Tensei Kenja no Isekai Life')
     animeFeedData = parseFeed(toDownload)
-    # print(animeFeedData.entries)
     for item in animeFeedData.entries:
-        print(item.title)
-        downloadAnime(item.link)
+        downloadAnime(item.nyaa_infohash, defaultDownloadDirectory)
 
-# def addFeedData():
-#     parseFeed()
-#     for i in range(0, len(animeFeedData.entries)):
-#         parsedTime = time.strftime(
-#             "%Y-%m-%d %H:%M:%S", animeFeedData.entries[i].published_parsed)
-#         parseTitle = animeFeedData.entries[i].title
-#         animeFeedData.append((parsedTime, parseTitle))
+    # def addFeedData():
+    #     parseFeed()
+    #     for i in range(0, len(animeFeedData.entries)):
+    #         parsedTime = time.strftime(
+    #             "%Y-%m-%d %H:%M:%S", animeFeedData.entries[i].published_parsed)
+    #         parseTitle = animeFeedData.entries[i].title
+    #         animeFeedData.append((parsedTime, parseTitle))
 
-#     sortList()
+    #     sortList()
 
+    # def sortList():
+    #     animeFeedData.sort()
 
-# def sortList():
-#     animeFeedData.sort()
-
-
-# def searchAnime(title, list):
-#     r = re.compile(".*"+title, re.IGNORECASE)
-#     result_list = filter(lambda tup: any(map(r.match, tup)), list)
-#     return result_list
+    # def searchAnime(title, list):
+    #     r = re.compile(".*"+title, re.IGNORECASE)
+    #     result_list = filter(lambda tup: any(map(r.match, tup)), list)
+    #     return result_list
 
 
 def checkForNewEpisode(oldItem, newItem):
@@ -156,7 +161,8 @@ def searchForNewEpisodes(data):
 
         if checkForNewEpisode(oldItem=item, newItem=newItem):
             print("Downloading " + newItem.title)
-            downloadAnime(newItem.link)
+            downloadAnime(newItem.nyaa_infohash, defaultDownloadDirectory)
+            # newHash = newItem.nyaa_infohash
             newHash = generateAnimeHash(newItem.link, newItem.title)
             data[index].update({'lastHash': newHash})
 
@@ -181,6 +187,6 @@ def main():
         writeDataToJSON(data)
 
 
-# main()
-print("Downloading all episodes")
-downloadAllEpisodesOfAnime()
+main()
+# print("Downloading all episodes")
+# downloadAllEpisodesOfAnime()
