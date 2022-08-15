@@ -1,18 +1,33 @@
 import sys
 import time
 import feedparser  # Parse RSS feed
+import urllib.parse
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 
 animeList = []
-animeFeed = feedparser.parse(
-    "https://subsplease.org/rss/?r=1080")
+rssFeed = "https://nyaa.si/?page=rss&c=0_0&f=0&&u=subsplease&q=one+piece+1080p"
+animeFeed = None
+animeListToTrack = ["One Piece"]
+animeGroups = ["subsplease", "yameii"]
+downloadResolution = "1080p"
 
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
 
 
+def generateRSSFeedString(animeGroup, resolution, searchTerm):
+    query = f'{searchTerm} {resolution}'
+    uriSearchQuery = urllib.parse.quote(query)
+    feedString = f"https://nyaa.si/?page=rss&u={animeGroup}&q={uriSearchQuery}"
+
+
+def parseFeed():
+    animeFeed = feedparser.parse(rssFeed)
+
+
 def addFeedData():
+    parseFeed()
     for i in range(0, len(animeFeed.entries)):
         parsedTime = time.strftime(
             "%Y-%m-%d %H:%M:%S", animeFeed.entries[i].published_parsed)
