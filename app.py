@@ -1,7 +1,4 @@
-from operator import ne
-import sys
 import time
-import io
 import json
 import os
 import feedparser  # Parse RSS feed
