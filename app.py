@@ -52,29 +52,30 @@ def generateAnimeHash(link, title):
 
 
 def downloadAnime(link):
-    try:
-        # params = {
-        #     'save_path': savePath,
-        #     'storage_mode': lt.storage_mode_t(2),
-        #     'paused': False,
-        #     'auto_managed': True,
-        #     'duplicate_is_error': True
-        # }
-        # ses = lt.session()
-        # ses.listen_on(6881, 6891)
-        # handle = lt.add_magnet_uri(ses, link, params)
-        # ses.start_dht()
+    qb.download_from_link(link)
+    # try:
+    #     # params = {
+    #     #     'save_path': savePath,
+    #     #     'storage_mode': lt.storage_mode_t(2),
+    #     #     'paused': False,
+    #     #     'auto_managed': True,
+    #     #     'duplicate_is_error': True
+    #     # }
+    #     # ses = lt.session()
+    #     # ses.listen_on(6881, 6891)
+    #     # handle = lt.add_magnet_uri(ses, link, params)
+    #     # ses.start_dht()
 
-        # while (not handle.has_metadata()):
-        #     time.sleep(1)
+    #     # while (not handle.has_metadata()):
+    #     #     time.sleep(1)
 
-        # while (handle.status().state != lt.torrent_status.seeding):
-        #     s = handle.status()
+    #     # while (handle.status().state != lt.torrent_status.seeding):
+    #     #     s = handle.status()
 
-        #     time.sleep(5)
-        qb.download_from_link(link)
-    except:
-        pass
+    #     #     time.sleep(5)
+    #     qb.download_from_link(link)
+    # except:
+    #     pass
 
 
 def generateRSSFeedString(animeGroup, resolution, searchTerm):
@@ -82,6 +83,15 @@ def generateRSSFeedString(animeGroup, resolution, searchTerm):
     uriSearchQuery = textToURIFormat(query)
     return f"https://nyaa.si/?page=rss&u={animeGroup}&q={uriSearchQuery}"
 
+
+def downloadAllEpisodesOfAnime():
+    toDownload = generateRSSFeedString(defaultAnimeSearchGroup,
+                                       defaultDownloadResolution, 'Kinsou no Vermeil')
+    animeFeedData = parseFeed(toDownload)
+    # print(animeFeedData.entries)
+    for item in animeFeedData.entries:
+        print(item.title)
+        downloadAnime(item.link)
 
 # def addFeedData():
 #     parseFeed()
@@ -171,4 +181,6 @@ def main():
         writeDataToJSON(data)
 
 
-main()
+# main()
+print("Downloading all episodes")
+downloadAllEpisodesOfAnime()
