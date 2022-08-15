@@ -1,58 +1,177 @@
+from operator import ne
 import sys
 import time
+import io
+import json
+import os
 import feedparser  # Parse RSS feed
 import urllib.parse
+import hashlib
 from qbittorrent import Client  # Qbittorrent Client
 import re  # Regular Expressions
 
-animeList = []
-rssFeed = "https://nyaa.si/?page=rss&c=0_0&f=0&&u=subsplease&q=one+piece+1080p"
-animeFeed = None
-animeListToTrack = ["One Piece"]
-animeGroups = ["subsplease", "yameii"]
-downloadResolution = "1080p"
+animeFeedData = None
+data = [{
+    'title': 'One Piece',
+    'lastHash': 'None',
+    'animeGroup': 'subsplease',
+    'resolution': '1080p',
+}]
+
+# animeGroups = ["subsplease", "yameii"]
+# defaultDownloadResolution = "1080p"
 
 qb = Client("http://127.0.0.1:8080/")
 qb.login('nafislord', 'animedownload')
 
 
+# Library functions if update is needed can be changed here
+
+def parseFeed(rssFeedLink):
+    """This function will parse a link that is an RSS feed and return the parsed data
+
+    :param rssFeedLink: link to the RSS feed
+    :type rssFeedLink: string
+    :return: parsed data from the RSS feed
+    :rtype: json object array
+    """
+    return feedparser.parse(rssFeedLink)
+
+
+def textToURIFormat(text):
+    """This will convert a text string to a URI format
+
+    :param text: the text to convert to URI format
+    :type text: string
+    :return: the text in URI format
+    :rtype: string
+    """
+    return urllib.parse.quote(text)
+
+
+def generateAnimeHash(link, title):
+    """This generates a md5 hash with link and title of the anime
+
+    :param link: link of anime, title: title of anime
+    :type link: string, title: string
+    :return: MD5 hash of link and title
+    :rtype: string
+    """
+    textToEncode = link + title
+    return hashlib.md5(textToEncode.encode('utf-8')).hexdigest()
+
+
+def downloadAnime(link):
+    try:
+        # params = {
+        #     'save_path': savePath,
+        #     'storage_mode': lt.storage_mode_t(2),
+        #     'paused': False,
+        #     'auto_managed': True,
+        #     'duplicate_is_error': True
+        # }
+        # ses = lt.session()
+        # ses.listen_on(6881, 6891)
+        # handle = lt.add_magnet_uri(ses, link, params)
+        # ses.start_dht()
+
+        # while (not handle.has_metadata()):
+        #     time.sleep(1)
+
+        # while (handle.status().state != lt.torrent_status.seeding):
+        #     s = handle.status()
+
+        #     time.sleep(5)
+        qb.download_from_link(link)
+    except:
+        pass
+
+
 def generateRSSFeedString(animeGroup, resolution, searchTerm):
     query = f'{searchTerm} {resolution}'
-    uriSearchQuery = urllib.parse.quote(query)
-    feedString = f"https://nyaa.si/?page=rss&u={animeGroup}&q={uriSearchQuery}"
+    uriSearchQuery = textToURIFormat(query)
+    return f"https://nyaa.si/?page=rss&u={animeGroup}&q={uriSearchQuery}"
 
 
-def parseFeed():
-    animeFeed = feedparser.parse(rssFeed)
+# def addFeedData():
+#     parseFeed()
+#     for i in range(0, len(animeFeedData.entries)):
+#         parsedTime = time.strftime(
+#             "%Y-%m-%d %H:%M:%S", animeFeedData.entries[i].published_parsed)
+#         parseTitle = animeFeedData.entries[i].title
+#         animeFeedData.append((parsedTime, parseTitle))
+
+#     sortList()
 
 
-def addFeedData():
-    parseFeed()
-    for i in range(0, len(animeFeed.entries)):
-        parsedTime = time.strftime(
-            "%Y-%m-%d %H:%M:%S", animeFeed.entries[i].published_parsed)
-        parseTitle = animeFeed.entries[i].title
-        animeList.append((parsedTime, parseTitle))
-
-    sortList()
+# def sortList():
+#     animeFeedData.sort()
 
 
-def sortList():
-    animeList.sort()
+# def searchAnime(title, list):
+#     r = re.compile(".*"+title, re.IGNORECASE)
+#     result_list = filter(lambda tup: any(map(r.match, tup)), list)
+#     return result_list
 
 
-def searchAnime(title):
-    r = re.compile(".*"+title, re.IGNORECASE)
-    result_list = filter(lambda tup: any(map(r.match, tup)), animeList)
-    return result_list
+def checkForNewEpisode(oldItem, newItem):
+
+    newHash = generateAnimeHash(
+        newItem.link, newItem.title)
+    if newHash == oldItem['lastHash']:
+        print("No new episode found")
+        return False
+    else:
+        print("New episode found")
+        return True
 
 
-def downloadAnime(title):
-    for i in range(0, len(animeFeed.entries)):
-        if title == animeFeed.entries[i].title:
-            print("Downloading " + title)
-            qb.download_from_link(animeFeed.entries[i].link)
-            break
+def checkIfListExists():
+    if os.path.exists('animeList.json'):
+        print("Anime List Data exists and is readable")
+
+    else:
+        print("Anime List Data file is missing or is not readable, creating file...")
+        print("Please input anime to track")
+        data = [{
+            'title': input('Anime Name: '),
+            'lastHash': 'None',
+            'animeGroup': 'subsplease',
+            'resolution': '1080p',
+        }]
+        writeDataToJSON(data)
 
 
-addFeedData()
+def loadData():
+    checkIfListExists()
+    with open('animeList.json', 'r') as f:
+        data = json.load(f)
+        return data
+
+
+def writeDataToJSON(data):
+    with open('animeList.json', 'w') as f:
+        json.dump(data, f)
+
+
+def main():
+    loadData()
+    # Check for new episodes for each anime in the list
+    for index, item in enumerate(data):
+        rssLink = generateRSSFeedString(
+            item['animeGroup'], item['resolution'], item['title'])
+        animeFeedData = parseFeed(rssLink)
+        # searchAnime(item["title"], animeFeedData) # filter out the anime from the list
+        newItem = animeFeedData.entries[0]
+
+        if checkForNewEpisode(oldItem=item, newItem=newItem):
+            print("Downloading " + item['title'])
+            # downloadAnime(newItem.link)
+            print('Before', data)
+            newHash = generateAnimeHash(newItem.link, newItem.title)
+            data[index].update({'lastHash': newHash})
+            print("After Update", data)
+    writeDataToJSON(data)
+
+
+main()
